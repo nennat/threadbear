@@ -754,3 +754,13 @@ test('archiving during a turn archives in Codex only once the live CLI has exite
   const archived: { nativeSessionId: string }[] = h.codex.archived;
   assert.ok(!archived.some((a) => a.nativeSessionId === '019a-back'));
 });
+
+test('defaults.permissionMode sets the access a new thread with no mode named starts on; a named mode wins', () => {
+  const h = codexHarness({ defaults: { cwd: '', permissionMode: 'auto' } });
+  h.cfg.defaults.cwd = path.join(h.home, 'work');
+  assert.equal(h.runner.create({ text: 'hi', accountId: 'claude-3' }).thread.permissionMode, 'auto');
+  assert.equal(h.runner.create({ text: 'hi', accountId: 'claude-3', permissionMode: 'full' }).thread.permissionMode, 'full');
+  // Unset is full, as before.
+  const plain = codexHarness();
+  assert.equal(plain.runner.create({ text: 'hi', accountId: 'claude-3' }).thread.permissionMode, 'full');
+});

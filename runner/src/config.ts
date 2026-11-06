@@ -7,7 +7,12 @@ import { atomicWriteFileSync } from './fsutil.ts';
 import { RELEASE } from './release.ts';
 import { findGateway, gatewayBase } from './connectors.ts';
 import { findGatewayClient } from './notion-tasks.ts';
-import { CLI_POLICIES, isEffortLevel, isProvider, type CliPolicy, type EffortLevel, type Provider } from './protocol.ts';
+import { CLI_POLICIES, isEffortLevel, isProvider, type CliPolicy, type EffortLevel, type PermissionMode, type Provider } from './protocol.ts';
+
+const PERMISSION_MODES: readonly PermissionMode[] = ['full', 'ask', 'auto', 'plan'];
+function isPermissionMode(v: unknown): v is PermissionMode {
+  return typeof v === 'string' && (PERMISSION_MODES as readonly string[]).includes(v);
+}
 
 // <package version>+<release id>, or +source when run from a checkout.
 export const RUNNER_VERSION = RELEASE.version;
@@ -64,6 +69,9 @@ export type Config = {
     model?: string;
     models?: Partial<Record<Provider, string>>;
     efforts?: Partial<Record<Provider, EffortLevel>>;
+    // The access a new thread with no mode named starts on (the phone, the
+    // website, tb new). Unset means full.
+    permissionMode?: PermissionMode;
   };
   // Where accounts are discovered. Tests can narrow these.
   claudeMainDir: string;
@@ -139,6 +147,7 @@ export type RunnerJson = {
     model?: string;
     models?: Partial<Record<Provider, string>>;
     efforts?: Partial<Record<Provider, EffortLevel>>;
+    permissionMode?: string;
   };
   claudePath?: string;
   idleMinutes?: number;
@@ -255,6 +264,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       model: nonEmpty(json.defaults?.model),
       ...(models ? { models } : {}),
       ...(efforts ? { efforts } : {}),
+      ...(isPermissionMode(json.defaults?.permissionMode) ? { permissionMode: json.defaults?.permissionMode as PermissionMode } : {}),
     },
     claudeMainDir: expandHome(env.THREADBEAR_CLAUDE_MAIN_DIR || '~/.claude'),
     claudeMainJson: expandHome(env.THREADBEAR_CLAUDE_MAIN_JSON || '~/.claude.json'),
